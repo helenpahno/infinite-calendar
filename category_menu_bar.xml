@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/deep_coral">
+
+    <LinearLayout
+        android:id="@+id/color_border"
+        android:layout_width="32dp"
+        android:layout_height="20dp"
+        android:background="@color/white"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignBottom="@+id/category_name"
+        android:layout_marginStart="5dp"
+        android:layout_marginTop="10dp"
+        android:layout_alignTop="@+id/category_name">
+        <TextView
+            android:id="@+id/color_swatch"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="1dp"
+            android:background="@color/pink"
+            android:text="" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/category_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@+id/color_border"
+        android:gravity="center"
+        android:layout_marginStart="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="10dp"
+        android:text="Work"
+        android:textColor="@color/white"
+        android:textSize="20sp" />
+
+    <ImageButton
+        android:id="@+id/delete_category_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:src="@drawable/delete_event_button"
+        android:padding="16dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignBottom="@+id/category_name"
+        android:layout_alignTop="@+id/category_name"/>
+
+</RelativeLayout>

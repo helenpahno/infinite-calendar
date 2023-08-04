@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="burgundy">#FF800020</color>
+    <color name="deep_coral">#FFFF0A54</color>
+    <color name="georgia_coral">#FFFF5C8A</color>
+    <color name="pink">#FFFF99AC</color>
+    <color name="wan_pink">#FFF9BEC7</color>
+    <color name="faerie">#FFFAE0E4</color>
+    <color name="lantern_purple">#FF7028E3</color>
+    <color name="lilac">#FF9452DC</color>
+    <color name="mid_purple">#FFAA6DD7</color>
+    <color name="pale_orchid">#FFC78FD1</color>
+    <color name="blush">#FFE5B2CA</color>
+    <color name="forest">#FF00B386</color>
+    <color name="karate_mat">#FF00ECBF</color>
+    <color name="sky">#FF00EDFF</color>
+    <color name="robin_egg">#FFB2F5FF</color>
+    <color name="pale_blue">#FFE9FFFA</color>
+</resources>
