@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@null">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black"
+        android:alpha="0.6"/>
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/deep_coral"
+        android:layout_centerInParent="true">
+
+        <TextView
+            android:id="@+id/title_seekbar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="This event will begin at: 12:00 PM"
+            android:textColor = "@color/white"
+            android:textSize="20sp"
+            android:layout_margin="5dp"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            />
+
+        <TextView
+            android:id="@+id/tooltip_seekbar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scroll to change minutes"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:layout_margin="5dp"
+            android:layout_centerHorizontal="true"
+            android:layout_below="@+id/title_seekbar"/>
+
+        <SeekBar
+            android:id="@+id/seekBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentEnd="true"
+            android:layout_below="@+id/tooltip_seekbar"
+            android:layout_margin="5dp" />
+
+        <Button
+            android:id="@+id/finalize_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:text="OK"
+            android:layout_centerHorizontal="true"
+            android:layout_below="@+id/seekBar"
+            android:layout_margin="5dp"/>
+
+    </RelativeLayout>
+
+</RelativeLayout>

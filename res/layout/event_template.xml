@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/event_template_overarch"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/pink"
+    android:layout_margin="5dp">
+
+    <TextView
+        android:id="@+id/event_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="PHY 211"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="5dp"
+        android:layout_toStartOf="@+id/delete_button"
+        />
+
+    <TextView
+        android:id="@+id/event_category"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="School"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:layout_below="@+id/event_name"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="5dp"
+        />
+
+    <TextView
+        android:id="@+id/event_duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="10:00a - 10:50a"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:layout_below="@+id/event_category"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="5dp"
+        />
+
+    <ImageButton
+        android:id="@+id/delete_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/delete_event_button"
+        android:background="@null"
+        android:layout_alignParentEnd="true"
+        android:layout_alignTop="@+id/event_name"
+        android:padding="10dp"
+        />
+
+</RelativeLayout>
