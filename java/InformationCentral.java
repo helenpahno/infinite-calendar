@@ -1,10 +1,22 @@
 package com.helenpahno.infinitecalendar;
 
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Handler;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.sql.Date;
@@ -20,6 +32,8 @@ import java.util.Scanner;
 public abstract class InformationCentral {
     public static Context mainApplicationContext;
     public static Locale l;
+    public static AlarmManager alarmManager;
+    public static View upcomingEventHUD;
 
     public static CalendarAdapter runtimeAdapter;
     public static RecyclerView runtimeRecyclerView;
@@ -69,7 +83,8 @@ public abstract class InformationCentral {
 
         runtimeAdapter.notifyItemChanged(0);
         new Handler().postDelayed(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
                 runtimeRecyclerView.smoothScrollBy(0, 1);
             }
         }, 200);
@@ -84,7 +99,13 @@ public abstract class InformationCentral {
             for (List<BoundEvent> eventList : boundEventLog.values()) {
                 for (int i = 0; i < eventList.size(); i++) {
                     BoundEvent event = eventList.get(i);
-                    String parsableData = (event.name + "/" + event.category + "/" + Integer.toString(event.duration) + "/" + event.day.toString() + "/" + Integer.toString(event.hour) + "/" + Integer.toString(event.minuteOffset)); // Create some parsable data here
+                    String notifEnabled = "true";
+                    if (event.notificationsEnabled == false) {
+                        notifEnabled = "false";
+                    } else {
+                        notifEnabled = "true";
+                    }
+                    String parsableData = (event.name + "/" + event.category + "/" + Integer.toString(event.duration) + "/" + event.day.toString() + "/" + Integer.toString(event.hour) + "/" + Integer.toString(event.minuteOffset) + "/" + notifEnabled); // Create some parsable data here
                     editor.putString(Integer.toString(overarch), parsableData);
                     System.out.println("saveBoundEventLog(): System event saved by name of " + event.name + " on date " + event.day.toString());
                     overarch++;
@@ -129,10 +150,22 @@ public abstract class InformationCentral {
                     }
                     int hour = Integer.parseInt(s.next());
                     int minuteOffset = Integer.parseInt(s.next());
+                    String notifEnabled = "false";
+                    try {
+                        notifEnabled = s.next();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
 
                     BoundEvent loadedEvent = new BoundEvent(duration, name, category, day, hour, minuteOffset); // Take all the data and make an event with it
                     // DEBUG
                     System.out.println("Method loadBoundEventLog(): BoundEvent loaded by name of " + loadedEvent.name + " on date " + loadedEvent.day.toString());
+
+                    if (notifEnabled.equals("false")) {
+                        loadedEvent.notificationsEnabled = false;
+                    } else {
+                        loadedEvent.notificationsEnabled = true;
+                    }
 
                     if (tempEventLog.containsKey(day.toString())) {
                         List<BoundEvent> overrideList = tempEventLog.get(day.toString()); // Get the right list in the HashMap
@@ -151,6 +184,22 @@ public abstract class InformationCentral {
         boundEventLog = tempEventLog;
         purgePassedEvents();
         updateUpcomingEvent();
+    }
+
+    public static void deleteBoundEvent(BoundEvent discardedEvent, Date fromDate, CalendarAdapter.DayViewHolder callHolder) {
+        rescindNotificationAlarm(discardedEvent, "imminent_events");
+        List<BoundEvent> list = boundEventLog.get(fromDate.toString());
+        if (list != null && list.contains(discardedEvent)) {
+            list.remove(discardedEvent);
+            boundEventLog.put(fromDate.toString(), list);
+        }
+
+        if (list != null && list.size() == 0) {
+            boundEventLog.remove(fromDate.toString());
+        }
+        saveBoundEventLog();
+        updateUpcomingEvent();
+        visuallyUpdateUpcomingEventHUD();
     }
 
     public static void saveCategories() {
@@ -219,7 +268,7 @@ public abstract class InformationCentral {
                         }
                     }
                     modified = true;
-                } catch(Exception e) {
+                } catch (Exception e) {
                     System.out.println("ConcurrentMod exception.... waiting.... ");
                     try {
                         Thread.sleep(10);
@@ -233,7 +282,7 @@ public abstract class InformationCentral {
         saveBoundEventLog();
     }
 
-    public static void updateUpcomingEvent () {
+    public static void updateUpcomingEvent() {
         if (boundEventLog == null) {
             System.out.println("updateUpcomingEvent(): NEW boundEventLog created... probably for the second time");
             boundEventLog = new HashMap<String, List<BoundEvent>>();
@@ -313,10 +362,10 @@ public abstract class InformationCentral {
         rawEndTime = rawBeginTime + event.duration;
 
         if (rawEndTime >= (13 * 60)) {
-            secondTime = secondTime + Integer.toString((int) Math.floor(rawEndTime/60) - 12);
+            secondTime = secondTime + Integer.toString((int) Math.floor(rawEndTime / 60) - 12);
             secondAppend = "PM";
         } else {
-            if (((int) rawEndTime/60) == 0) {
+            if (((int) rawEndTime / 60) == 0) {
                 secondTime = secondTime + "12";
             } else {
                 secondTime = secondTime + Integer.toString((int) Math.floor(rawEndTime / 60));
@@ -341,7 +390,7 @@ public abstract class InformationCentral {
         return userFriendlyDuration;
     }
 
-    public void editBoundEventAttribute (BoundEvent event, String attributeType, String overwrite) {
+    public static void editBoundEventAttribute(BoundEvent event, String attributeType, String overwrite) {
         // When called, this function changes the name, category, or duration of the passed BoundEvent.
 
         Date eventDay = event.day;
@@ -373,8 +422,131 @@ public abstract class InformationCentral {
         saveBoundEventLog();
     }
 
-    public void editFloatingEventAttribute (FloatingEvent event, String attributeType, String overwrite) {
+    public static void editFloatingEventAttribute(FloatingEvent event, String attributeType, String overwrite) {
         // When called, this function changes the name, category, or duration of the passed FloatingEvent.
 
+    }
+
+    public static void sendNotificationForEvent(String channelID, String uName, String uTime, Intent intent) {
+        PendingIntent pendingIntent = PendingIntent.getActivity(mainApplicationContext, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+
+        String notifName = "Upcoming event: " + uName;
+        String notifText = "Happening at " + uTime + ".";
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(mainApplicationContext, channelID);
+        builder.setSmallIcon(R.drawable.notification_icon);
+        builder.setContentTitle(notifName);
+        builder.setContentText(notifText);
+        builder.setContentIntent(pendingIntent);
+        builder.setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        System.out.println("sendNotificationForEvent(): Builder working as intended");
+
+        NotificationManagerCompat NMC = NotificationManagerCompat.from(mainApplicationContext);
+
+        // LOSER code that Android Studio FORCED me to paste in
+        if (ActivityCompat.checkSelfPermission(mainApplicationContext, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+
+        // Back to you, Chet
+        NMC.notify(0, builder.build());
+    }
+
+    public static void bindNotificationAlarm (BoundEvent event, String channel) {
+        Intent i = new Intent(mainApplicationContext, EventNotificationReceiver.class);
+        String eventData = event.name + "/" + Integer.toString(event.hour) + "/" + Integer.toString(event.minuteOffset);
+        i.putExtra("CHANNEL_ID", channel);
+        i.putExtra("EVENT_DATA", eventData);
+        PendingIntent p = PendingIntent.getBroadcast(mainApplicationContext, 0, i, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        long fireTime = 0;
+        long eventDay = event.day.getTime();
+        fireTime = eventDay + (event.hour * 3600000) + (event.minuteOffset * 60000) - (event.alarmBuffer * 60000);
+
+        Calendar c = Calendar.getInstance();
+        long g = c.getTimeInMillis();
+
+        System.out.println("bindNotificationAlarm(): Alarm bound for " + event.name + " at millisecond time " + Long.toString(fireTime) + "\nCurrent time in milliseconds: " + Long.toString(g));
+        alarmManager.set(AlarmManager.RTC_WAKEUP, fireTime, p);
+    }
+
+    public static void rescindNotificationAlarm (BoundEvent event, String channel) {
+        Intent intent = new Intent(InformationCentral.mainApplicationContext, EventNotificationReceiver.class);
+        String eventData = event.name + "/" + Integer.toString(event.hour) + "/" + Integer.toString(event.minuteOffset);
+        intent.putExtra("CHANNEL_ID", "imminent_events");
+        intent.putExtra("EVENT_DATA", eventData);
+        PendingIntent p = PendingIntent.getBroadcast(InformationCentral.mainApplicationContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        alarmManager.cancel(p);
+    }
+    
+    public static void visuallyUpdateUpcomingEventHUD() {
+        TextView eventTitle = (TextView) upcomingEventHUD.findViewById(R.id.upcoming_event_title);
+        TextView eventDuration = (TextView) upcomingEventHUD.findViewById(R.id.upcoming_event_duration);
+        TextView eventDate = (TextView) upcomingEventHUD.findViewById(R.id.upcoming_event_date);
+        TextView topText = (TextView) upcomingEventHUD.findViewById(R.id.upcoming_text);
+        ImageButton expandCollapseButton = (ImageButton) upcomingEventHUD.findViewById(R.id.expand_collapse_button);
+        RelativeLayout.LayoutParams buttonParams = (RelativeLayout.LayoutParams) expandCollapseButton.getLayoutParams();
+
+        BoundEvent upcoming = InformationCentral.nextUpcomingEvent;
+
+        try {
+            upcomingEventHUD.setBackgroundColor(InformationCentral.categoryColorMap.get(upcoming.category));
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Color will take care of itself
+        }
+
+        Calendar c = Calendar.getInstance();
+        java.util.Date utilityDay = new java.util.Date(upcoming.day.getTime());
+        c.setTime(utilityDay);
+
+        SimpleDateFormat weekFormatter = new SimpleDateFormat("EEEE", InformationCentral.l);
+        SimpleDateFormat monthFormatter = new SimpleDateFormat("MMMM", InformationCentral.l);
+
+        if (InformationCentral.upcomingHUDstatus == "expanded") {
+            expandCollapseButton.setImageResource(R.drawable.collapse_view_button);
+            expandCollapseButton.setPadding(10, 10, 10, 10);
+            buttonParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            buttonParams.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+
+            String dayOfWeek = weekFormatter.format(utilityDay);
+            String month = monthFormatter.format(utilityDay);
+            String day = Integer.toString(c.get(Calendar.DAY_OF_MONTH));
+            String userFriendlyDay = dayOfWeek + ", " + month + " " + day;
+
+            eventTitle.setVisibility(View.VISIBLE);
+            eventDuration.setVisibility(View.VISIBLE);
+            eventDate.setVisibility(View.VISIBLE);
+            eventTitle.setText(upcoming.name + " (" + upcoming.category + ")");
+            eventDuration.setText(InformationCentral.returnUserFriendlyDurationFromEvent(upcoming));
+            eventDate.setText(userFriendlyDay);
+            topText.setText("Next upcoming event:");
+        } else if (InformationCentral.upcomingHUDstatus == "collapsed") {
+            expandCollapseButton.setImageResource(R.drawable.expand_view_button);
+            expandCollapseButton.setPadding(0, 0, 0, 0);
+            buttonParams.removeRule(RelativeLayout.CENTER_HORIZONTAL);
+            buttonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+
+            String month = monthFormatter.format(utilityDay);
+            String day = Integer.toString(c.get(Calendar.DAY_OF_MONTH));
+            eventTitle.setText("");
+            eventTitle.setVisibility(View.GONE);
+            eventDuration.setText("");
+            eventDuration.setVisibility(View.GONE);
+            eventDate.setText("");
+            eventDate.setVisibility(View.GONE);
+            topText.setText("Next event: " + upcoming.name + " (" + month + " " + day + ")");
+        }
+
+        expandCollapseButton.setLayoutParams(buttonParams);
     }
 }

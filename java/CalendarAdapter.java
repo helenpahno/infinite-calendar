@@ -1,6 +1,8 @@
 package com.helenpahno.infinitecalendar;
 
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,6 +10,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -150,8 +153,42 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayVie
 
                     @Override
                     public void onClick(View view) {
-                        deleteEvent(eventCode, date, holder);
+                        InformationCentral.deleteBoundEvent(eventCode, date, holder);
                         eventSlot.removeView(eventView);
+                        refreshDisplay(holder);
+                    }
+                });
+
+                ImageButton notifButton = (ImageButton) eventView.findViewById(R.id.notif_button);
+
+                if (eventCode.notificationsEnabled == false) {
+                    notifButton.setImageResource(R.drawable.notification_off_button);
+                } else {
+                    notifButton.setImageResource(R.drawable.notification_on_button);
+                }
+
+                notifButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (notifButton.getContentDescription().equals("Notifications are on")) {
+                            InformationCentral.rescindNotificationAlarm(eventCode, "imminent_events");
+                            eventCode.notificationsEnabled = false;
+
+                            notifButton.setContentDescription("Notifications are off");
+                            notifButton.setImageResource(R.drawable.notification_off_button);
+
+                            Toast.makeText(InformationCentral.mainApplicationContext, "Notification disabled for " + eventCode.name, Toast.LENGTH_SHORT).show();
+                        } else if (notifButton.getContentDescription().equals("Notifications are off")) {
+                            InformationCentral.bindNotificationAlarm(eventCode, "imminent_events");
+                            eventCode.notificationsEnabled = true;
+
+                            notifButton.setContentDescription("Notifications are on");
+                            notifButton.setImageResource(R.drawable.notification_on_button);
+
+                            Toast.makeText(InformationCentral.mainApplicationContext, "Notification enabled for " + eventCode.name, Toast.LENGTH_SHORT).show();
+                        }
+
+                        InformationCentral.saveBoundEventLog();
                     }
                 });
             }
@@ -159,6 +196,7 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayVie
     }
 
     public void deleteEvent (BoundEvent discardedEvent, Date fromDate, DayViewHolder callHolder) {
+        InformationCentral.rescindNotificationAlarm(discardedEvent, "imminent_events");
         List<BoundEvent> list = InformationCentral.boundEventLog.get(fromDate.toString());
         if (list != null && list.contains(discardedEvent)) {
             list.remove(discardedEvent);

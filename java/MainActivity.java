@@ -3,12 +3,16 @@ package com.helenpahno.infinitecalendar;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.AlarmManager;
 import android.app.DatePickerDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.Context;
@@ -66,9 +70,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         LayoutInflater inflater = LayoutInflater.from(getApplicationContext());
 
+        // Set-up the notification channel for the app
+        createNotificationChannel();
+
         // Sending essential central information
         InformationCentral.mainApplicationContext = getApplicationContext();
         InformationCentral.l = getResources().getConfiguration().getLocales().get(0);
+        InformationCentral.alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        InformationCentral.upcomingEventHUD = (View) findViewById(R.id.upcoming_event_HUD);
         InformationCentral.upcomingHUDstatus = "collapsed";
 
         displayMetrics = new DisplayMetrics();
@@ -83,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
 
         loadFloatingEvents();
         refreshSideTab();
-        visuallyUpdateUpcomingEventHUD();
+        InformationCentral.visuallyUpdateUpcomingEventHUD();
 
         // Open and close tab functionality below
         ImageButton tabButton = (ImageButton) findViewById(R.id.side_tab_button);
@@ -398,7 +407,8 @@ public class MainActivity extends AppCompatActivity {
                                             InformationCentral.purgePassedEvents();
                                             InformationCentral.updateUpcomingEvent();
                                             InformationCentral.saveBoundEventLog();
-                                            visuallyUpdateUpcomingEventHUD();
+                                            InformationCentral.bindNotificationAlarm(boundEvent, "imminent_events");
+                                            InformationCentral.visuallyUpdateUpcomingEventHUD();
                                         }
                                     });
                                 }
@@ -571,7 +581,7 @@ public class MainActivity extends AppCompatActivity {
                 } else if (InformationCentral.upcomingHUDstatus == "collapsed") {
                     InformationCentral.upcomingHUDstatus = "expanded";
                 }
-                visuallyUpdateUpcomingEventHUD();
+                InformationCentral.visuallyUpdateUpcomingEventHUD();
             }
         });
     }
@@ -616,7 +626,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         InformationCentral.purgePassedEvents();
         InformationCentral.updateUpcomingEvent();
-        visuallyUpdateUpcomingEventHUD();
+        InformationCentral.visuallyUpdateUpcomingEventHUD();
     }
 
     public void refreshSideTab() {
@@ -718,6 +728,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            ImageButton notifButton = eventView.findViewById(R.id.notif_button);
+            notifButton.setVisibility(View.GONE);
+
             eventPanel.addView(eventView); // Adds the above event to the panel
             makeDraggable(eventView, event); // Adds draggability to the event
         }
@@ -783,89 +796,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void saveBoundEvents(HashMap<String, List<BoundEvent>> eventLog) {
-
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences("boundEventLog", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-        int overarch = 0;
-
-        if (eventLog.size() != 0) {
-            for (List<BoundEvent> eventList : eventLog.values()) {
-                for (int i = 0; i < eventList.size(); i++) {
-                    BoundEvent event = eventList.get(i);
-                    System.out.println("Found event by the name of " + event.name + " in the list.");
-                    String parsableData = (event.name + "/" + event.category + "/" + Integer.toString(event.duration) + "/" + event.day.toString() + "/" + Integer.toString(event.hour) + "/" + Integer.toString(event.minuteOffset)); // Create some parsable data here
-                    editor.putString(Integer.toString(overarch), parsableData);
-                    overarch++;
-                }
-            }
-        } else {
-            overarch = -1;
-        }
-
-        System.out.println("Final overarch value at: " + Integer.toString(overarch));
-        editor.putInt("numerator", overarch);
-        editor.apply();
-    }
-
-    public HashMap<String, List<BoundEvent>> loadBoundEvents() {
-        HashMap<String, List<BoundEvent>> tempEventLog = new HashMap<String, List<BoundEvent>>();
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences("boundEventLog", Context.MODE_PRIVATE);
-        Locale l = getResources().getConfiguration().getLocales().get(0);
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-
-        int overarchingQuantity = sharedPref.getInt("numerator", -1);
-
-        // DEBUG
-        System.out.println("GETTING ALL SHAREDPREFS VALUES FOR BOUND EVENTS");
-        System.out.println(sharedPref.getAll());
-
-        if (overarchingQuantity == -1) {
-            System.out.println("No bound events found.");
-            tempEventLog = null;
-        } else {
-            List<BoundEvent> temp = new ArrayList<BoundEvent>();
-            Date persistentDate = null;
-            for (int i = 0; i < overarchingQuantity; i++) {
-                String loadedParseData = sharedPref.getString(Integer.toString(i), "nil");
-                if (loadedParseData != "nil") {
-                    Scanner s = new Scanner(loadedParseData).useDelimiter("/"); // Create a scanner to pick through the SharedPreferences string with all the slashes in it
-
-                    String name = s.next(); // Find the event's name from the parsable string
-                    String category = s.next(); // Find the event's category from the parsable string
-                    int duration = Integer.parseInt(s.next()); // Find, and convert, the event's duration to int from the parsable string
-                    long x = 0; // Create a long int with value of 0
-                    Date day = new Date(x); // Create a default date value, UNIX time Dec. 31 1969, to use as the fallback date if the date parser errors out
-                    try {
-                        String dateParseRequest = s.next();
-                        java.util.Date d = new SimpleDateFormat("yyyy-MM-dd", l).parse(dateParseRequest); // Get a util date first because Java date parsers suck
-                        day = Date.valueOf(formatter.format(d));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        System.out.println("Date not found; defaulting to " + day.toString());
-                    }
-                    int hour = Integer.parseInt(s.next());
-                    int minuteOffset = Integer.parseInt(s.next());
-
-                    BoundEvent loadedEvent = new BoundEvent(duration, name, category, day, hour, minuteOffset); // Take all the data and make an event with it
-                    System.out.println("BoundEvent found by the name of " + name); // DEBUG: Tell output we loaded an event
-
-                    if (tempEventLog.containsKey(day.toString())) {
-                        List<BoundEvent> overrideList = tempEventLog.get(day.toString()); // Get the right list in the HashMap
-                        overrideList.add(loadedEvent);
-                    } else {
-                        List<BoundEvent> createdList = new ArrayList<BoundEvent>();
-                        createdList.add(loadedEvent);
-                        tempEventLog.put(day.toString(), createdList);
-                    }
-                } else {
-                    System.out.println("BoundEvent declared null from file at position " + Integer.toString(i));
-                }
-            }
-        }
-        return tempEventLog;
-    }
-
     public void clickAndResetColorSwatch(View colorSwatch, ImageButton clickButton, PopupWindow window) {
         clickButton.setBackgroundColor(Color.parseColor(clickButton.getContentDescription().toString()));
         clickButton.setOnClickListener(new View.OnClickListener() {
@@ -878,66 +808,16 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void visuallyUpdateUpcomingEventHUD() {
-        View HUD = findViewById(R.id.upcoming_event_HUD);
-        TextView eventTitle = (TextView) HUD.findViewById(R.id.upcoming_event_title);
-        TextView eventDuration = (TextView) HUD.findViewById(R.id.upcoming_event_duration);
-        TextView eventDate = (TextView) HUD.findViewById(R.id.upcoming_event_date);
-        TextView topText = (TextView) HUD.findViewById(R.id.upcoming_text);
-        ImageButton expandCollapseButton = (ImageButton) HUD.findViewById(R.id.expand_collapse_button);
-        RelativeLayout.LayoutParams buttonParams = (RelativeLayout.LayoutParams) expandCollapseButton.getLayoutParams();
+    private void createNotificationChannel() {
+        String channelID = "imminent_events";
+        String channelName = "Imminent events";
+        String channelDesc = "Events upcoming in an hour or less";
+        int importance = NotificationManager.IMPORTANCE_DEFAULT;
 
-        BoundEvent upcoming = InformationCentral.nextUpcomingEvent;
+        NotificationChannel channel = new NotificationChannel(channelID, channelName, importance);
+        channel.setDescription(channelDesc);
 
-        try {
-            HUD.setBackgroundColor(InformationCentral.categoryColorMap.get(upcoming.category));
-        } catch (Exception e) {
-            e.printStackTrace();
-            // Color will take care of itself
-        }
-
-        Calendar c = Calendar.getInstance();
-        java.util.Date utilityDay = new java.util.Date(upcoming.day.getTime());
-        c.setTime(utilityDay);
-
-        SimpleDateFormat weekFormatter = new SimpleDateFormat("EEEE", InformationCentral.l);
-        SimpleDateFormat monthFormatter = new SimpleDateFormat("MMMM", InformationCentral.l);
-
-        if (InformationCentral.upcomingHUDstatus == "expanded") {
-            expandCollapseButton.setImageResource(R.drawable.collapse_view_button);
-            expandCollapseButton.setPadding(10, 10, 10, 10);
-            buttonParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
-            buttonParams.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
-
-            String dayOfWeek = weekFormatter.format(utilityDay);
-            String month = monthFormatter.format(utilityDay);
-            String day = Integer.toString(c.get(Calendar.DAY_OF_MONTH));
-            String userFriendlyDay = dayOfWeek + ", " + month + " " + day;
-
-            eventTitle.setVisibility(View.VISIBLE);
-            eventDuration.setVisibility(View.VISIBLE);
-            eventDate.setVisibility(View.VISIBLE);
-            eventTitle.setText(upcoming.name + " (" + upcoming.category + ")");
-            eventDuration.setText(InformationCentral.returnUserFriendlyDurationFromEvent(upcoming));
-            eventDate.setText(userFriendlyDay);
-            topText.setText("Next upcoming event:");
-        } else if (InformationCentral.upcomingHUDstatus == "collapsed") {
-            expandCollapseButton.setImageResource(R.drawable.expand_view_button);
-            expandCollapseButton.setPadding(0, 0, 0, 0);
-            buttonParams.removeRule(RelativeLayout.CENTER_HORIZONTAL);
-            buttonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-
-            String month = monthFormatter.format(utilityDay);
-            String day = Integer.toString(c.get(Calendar.DAY_OF_MONTH));
-            eventTitle.setText("");
-            eventTitle.setVisibility(View.GONE);
-            eventDuration.setText("");
-            eventDuration.setVisibility(View.GONE);
-            eventDate.setText("");
-            eventDate.setVisibility(View.GONE);
-            topText.setText("Next event: " + upcoming.name + " (" + month + " " + day + ")");
-        }
-
-        expandCollapseButton.setLayoutParams(buttonParams);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
     }
 }
