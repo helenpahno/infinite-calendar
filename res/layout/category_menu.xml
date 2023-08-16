@@ -12,7 +12,7 @@
         android:layout_centerHorizontal="true"
         android:gravity="center"
         android:textColor="@color/white"
-        android:textSize="24sp"
+        android:textSize="20sp"
         android:layout_toEndOf="@+id/add_category_button"
         android:layout_alignParentEnd="true"
         />

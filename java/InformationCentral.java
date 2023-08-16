@@ -9,10 +9,12 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -34,6 +36,7 @@ public abstract class InformationCentral {
     public static Locale l;
     public static AlarmManager alarmManager;
     public static View upcomingEventHUD;
+    public static float density;
 
     public static CalendarAdapter runtimeAdapter;
     public static RecyclerView runtimeRecyclerView;
@@ -415,6 +418,7 @@ public abstract class InformationCentral {
                 } catch (Exception e) {
                     e.printStackTrace();
                     System.out.println("editBoundEventAttribute(): Number given was not a valid integer. Change could not be completed.");
+                    Toast.makeText(InformationCentral.mainApplicationContext, "You entered something that isn't a whole number.", Toast.LENGTH_SHORT).show();
                 }
                 break;
         }
@@ -548,5 +552,13 @@ public abstract class InformationCentral {
         }
 
         expandCollapseButton.setLayoutParams(buttonParams);
+    }
+
+    public static void wipeAdapter() {
+        Parcelable state = runtimeRecyclerView.getLayoutManager().onSaveInstanceState();
+
+        runtimeRecyclerView.setAdapter(runtimeAdapter);
+
+        runtimeRecyclerView.getLayoutManager().onRestoreInstanceState(state);
     }
 }

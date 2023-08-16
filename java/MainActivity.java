@@ -86,6 +86,8 @@ public class MainActivity extends AppCompatActivity {
         screenWidth = displayMetrics.widthPixels;
         density = getApplicationContext().getResources().getDisplayMetrics().density;
 
+        InformationCentral.density = density;
+
         // Makes sure the events and displays are up-to-date and consistent with saved files
         InformationCentral.loadBoundEventLog();
         InformationCentral.loadCategories();
@@ -124,10 +126,6 @@ public class MainActivity extends AppCompatActivity {
                 int height = RelativeLayout.LayoutParams.MATCH_PARENT;
 
                 ViewGroup e = (ViewGroup) eventForm;
-                for (int i = 0; i < e.getChildCount(); i++) {
-                    RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) e.getChildAt(i).getLayoutParams();
-                    params.setMargins(10, 10, 10, 10);
-                }
                 eventForm.findViewById(R.id.complete_button).setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.burgundy));
                 boolean f = true;
                 final PopupWindow eventFormPopUp = new PopupWindow(eventForm, width, height, f);
@@ -718,6 +716,16 @@ public class MainActivity extends AppCompatActivity {
             }
 
             ImageButton deleteButton = eventView.findViewById(R.id.delete_button);
+
+            RelativeLayout.LayoutParams newParameter = (RelativeLayout.LayoutParams) deleteButton.getLayoutParams();
+            newParameter.removeRule(RelativeLayout.START_OF);
+            newParameter.addRule(RelativeLayout.ALIGN_PARENT_END);
+            deleteButton.setLayoutParams(newParameter);
+
+            RelativeLayout.LayoutParams newTitleParameter = (RelativeLayout.LayoutParams) name.getLayoutParams();
+            newTitleParameter.addRule(RelativeLayout.START_OF, R.id.delete_button);
+            name.setLayoutParams(newTitleParameter);
+
             deleteButton.setOnClickListener(new View.OnClickListener() {
 
                 @Override
@@ -728,8 +736,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            ImageButton notifButton = eventView.findViewById(R.id.notif_button);
-            notifButton.setVisibility(View.GONE);
+            eventView.findViewById(R.id.notif_button).setVisibility(View.GONE);
+            eventView.findViewById(R.id.settings_button).setVisibility(View.GONE);
+            eventView.findViewById(R.id.edit_button).setVisibility(View.GONE);
 
             eventPanel.addView(eventView); // Adds the above event to the panel
             makeDraggable(eventView, event); // Adds draggability to the event

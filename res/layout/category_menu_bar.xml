@@ -35,7 +35,7 @@
         android:layout_marginTop="10dp"
         android:text="Work"
         android:textColor="@color/white"
-        android:textSize="20sp" />
+        android:textSize="18sp" />
 
     <ImageButton
         android:id="@+id/delete_category_button"

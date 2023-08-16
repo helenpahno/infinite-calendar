@@ -1,26 +1,28 @@
 package com.helenpahno.infinitecalendar;
 
-import android.app.PendingIntent;
 import android.content.Context;
-import android.content.Intent;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.ImageView;
+import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.sql.Date;
-import java.util.HashMap;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayViewHolder>{
@@ -76,6 +78,21 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayVie
             hourView.getLayoutParams().height = pixels/24;
             hourView.setContentDescription(relevantDay.toString());
         }
+
+        TextView dateMarker = (TextView) holder.dayLayout.findViewById(R.id.date_demarcation);
+        SimpleDateFormat monthFormatter = new SimpleDateFormat("MMMM", InformationCentral.l);
+        SimpleDateFormat yearFormatter = new SimpleDateFormat("YYYY", InformationCentral.l);
+
+        Calendar c = Calendar.getInstance();
+        java.util.Date utilityDay = new java.util.Date(relevantDay.getTime());
+        c.setTime(utilityDay);
+
+        String month = monthFormatter.format(utilityDay);
+        String day = Integer.toString(c.get(Calendar.DAY_OF_MONTH) + 1);
+        String year = yearFormatter.format(utilityDay);
+
+        String userFriendlyCurrentDay = month + " " + day + ", " + year;
+        dateMarker.setText(userFriendlyCurrentDay);
 
         refreshDisplay(holder);
     }
@@ -162,9 +179,9 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayVie
                 ImageButton notifButton = (ImageButton) eventView.findViewById(R.id.notif_button);
 
                 if (eventCode.notificationsEnabled == false) {
-                    notifButton.setImageResource(R.drawable.notification_off_button);
+                    notifButton.setImageResource(R.drawable.stock_notification_off);
                 } else {
-                    notifButton.setImageResource(R.drawable.notification_on_button);
+                    notifButton.setImageResource(R.drawable.stock_notification_on);
                 }
 
                 notifButton.setOnClickListener(new View.OnClickListener() {
@@ -175,7 +192,7 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayVie
                             eventCode.notificationsEnabled = false;
 
                             notifButton.setContentDescription("Notifications are off");
-                            notifButton.setImageResource(R.drawable.notification_off_button);
+                            notifButton.setImageResource(R.drawable.stock_notification_off);
 
                             Toast.makeText(InformationCentral.mainApplicationContext, "Notification disabled for " + eventCode.name, Toast.LENGTH_SHORT).show();
                         } else if (notifButton.getContentDescription().equals("Notifications are off")) {
@@ -183,12 +200,99 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayVie
                             eventCode.notificationsEnabled = true;
 
                             notifButton.setContentDescription("Notifications are on");
-                            notifButton.setImageResource(R.drawable.notification_on_button);
+                            notifButton.setImageResource(R.drawable.stock_notification_on);
 
                             Toast.makeText(InformationCentral.mainApplicationContext, "Notification enabled for " + eventCode.name, Toast.LENGTH_SHORT).show();
                         }
 
                         InformationCentral.saveBoundEventLog();
+                    }
+                });
+
+                ImageButton editButton = (ImageButton) eventView.findViewById(R.id.edit_button);
+                editButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        View form = (View) LayoutInflater.from(InformationCentral.mainApplicationContext).inflate(R.layout.new_event_form, null);
+
+                        int width = RelativeLayout.LayoutParams.MATCH_PARENT;
+                        int height = RelativeLayout.LayoutParams.MATCH_PARENT;
+
+                        ViewGroup e = (ViewGroup) form;
+                        form.findViewById(R.id.complete_button).setBackgroundColor(ContextCompat.getColor(InformationCentral.mainApplicationContext, R.color.burgundy));
+                        boolean f = true;
+                        final PopupWindow formPop = new PopupWindow(form, width, height, f);
+                        formPop.showAtLocation(view, Gravity.CENTER, 0, 0);
+
+                        // MOD CODE: Avoid .xml like the PLAGUE
+                        form.findViewById(R.id.textView).setVisibility(View.GONE);
+                        form.findViewById(R.id.name_box).setVisibility(View.GONE);
+                        form.findViewById(R.id.textView2).setVisibility(View.GONE);
+                        form.findViewById(R.id.category_spinner).setVisibility(View.GONE);
+
+                        ((TextView) form.findViewById(R.id.textView3)).setText("New duration: ");
+                        ((TextView) form.findViewById(R.id.event_create_title)).setText("Modify Event");
+
+                        Button saveButton = (Button) form.findViewById(R.id.complete_button);
+
+                        saveButton.setText("Save");
+                        saveButton.setBackgroundColor(ContextCompat.getColor(InformationCentral.mainApplicationContext, R.color.burgundy));
+
+                        form.findViewById(R.id.complete_button).setBackgroundColor(ContextCompat.getColor(InformationCentral.mainApplicationContext, R.color.burgundy));
+
+                        List<String> durationOptions = new ArrayList<String>();
+                        durationOptions.add("minutes");
+                        durationOptions.add("hours");
+                        Spinner durationDropDown = form.findViewById(R.id.duration_type_spinner);
+                        GenericPinkAdapter durationAdapter = new GenericPinkAdapter(InformationCentral.mainApplicationContext, durationOptions, e);
+                        durationDropDown.setAdapter(durationAdapter);
+
+                        saveButton.setOnClickListener(new modifyEventClickListener(eventCode, formPop));
+                    }
+                });
+
+                editButton.setVisibility(View.GONE);
+                deleteButton.setVisibility(View.GONE);
+                notifButton.setVisibility(View.GONE);
+
+                ImageButton settings = eventView.findViewById(R.id.settings_button);
+                settings.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        ViewGroup mainView = (ViewGroup) view.getParent();
+
+                        TextView eName = mainView.findViewById(R.id.event_name);
+                        TextView eCat = mainView.findViewById(R.id.event_category);
+                        TextView eDur = mainView.findViewById(R.id.event_duration);
+
+                        Animation rotate1 = AnimationUtils.loadAnimation(InformationCentral.mainApplicationContext, R.anim.rotate_gear_clockwise);
+                        Animation rotate2 = AnimationUtils.loadAnimation(InformationCentral.mainApplicationContext, R.anim.rotate_gear_counterclockwise);
+                        Animation slideOut = AnimationUtils.loadAnimation(InformationCentral.mainApplicationContext, R.anim.slide_left);
+                        Animation slideIn = AnimationUtils.loadAnimation(InformationCentral.mainApplicationContext, R.anim.slide_right);
+
+                        if (deleteButton.getVisibility() == View.GONE) {
+                            settings.startAnimation(rotate2);
+                            eName.setVisibility(View.GONE);
+                            eCat.setVisibility(View.GONE);
+                            eDur.setVisibility(View.GONE);
+                            editButton.setVisibility(View.VISIBLE);
+                            deleteButton.setVisibility(View.VISIBLE);
+                            notifButton.setVisibility(View.VISIBLE);
+                            deleteButton.startAnimation(slideOut);
+                            notifButton.startAnimation(slideOut);
+                            editButton.startAnimation(slideOut);
+                        } else {
+                            settings.startAnimation(rotate1);
+                            eName.setVisibility(View.VISIBLE);
+                            eCat.setVisibility(View.VISIBLE);
+                            eDur.setVisibility(View.VISIBLE);
+                            deleteButton.startAnimation(slideIn);
+                            notifButton.startAnimation(slideIn);
+                            editButton.startAnimation(slideIn);
+                            deleteButton.setVisibility(View.GONE);
+                            notifButton.setVisibility(View.GONE);
+                            editButton.setVisibility(View.GONE);
+                        }
                     }
                 });
             }
@@ -204,5 +308,33 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.DayVie
         }
         InformationCentral.saveBoundEventLog();
         refreshDisplay(callHolder);
+    }
+
+    private class modifyEventClickListener implements View.OnClickListener {
+
+        BoundEvent eventInQuestion;
+        PopupWindow formPop;
+
+        public modifyEventClickListener(BoundEvent e, PopupWindow p) {
+            eventInQuestion = e;
+            formPop = p;
+        }
+
+        @Override
+        public void onClick(View view) {
+            ViewGroup formGroup = (ViewGroup) view.getParent();
+            String unspecifiedTime = ((TextView) formGroup.findViewById(R.id.duration_box)).getText().toString();
+            Spinner dropDown = (Spinner) formGroup.findViewById(R.id.duration_type_spinner);
+
+            if (dropDown.getSelectedItem().toString().equals("hours")) {
+                unspecifiedTime = Integer.toString(Integer.parseInt(unspecifiedTime) * 60);
+            }
+
+            InformationCentral.editBoundEventAttribute(eventInQuestion, "duration", unspecifiedTime);
+
+            formPop.dismiss();
+
+            InformationCentral.wipeAdapter();
+        }
     }
 }

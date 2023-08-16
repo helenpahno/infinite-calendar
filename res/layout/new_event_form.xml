@@ -85,8 +85,9 @@
             android:gravity="center"
             android:textColor="@color/white"
             android:textSize="18sp"
-            android:layout_alignBottom="@+id/duration_box"
             android:layout_below="@+id/textView2"
+            android:layout_alignBottom="@+id/duration_box"
+            android:layout_alignTop="@+id/duration_box"
             android:layout_alignParentStart="true"/>
 
         <EditText
@@ -99,7 +100,7 @@
             android:textColorHint="@color/white"
             android:inputType="number"
             android:layout_below="@+id/category_spinner"
-            android:layout_toRightOf="@+id/textView3"/>
+            android:layout_toEndOf="@+id/textView3"/>
 
         <Spinner
             android:id="@+id/duration_type_spinner"

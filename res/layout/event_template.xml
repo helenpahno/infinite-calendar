@@ -12,12 +12,11 @@
         android:layout_height="wrap_content"
         android:text="PHY 211"
         android:textColor="@color/white"
-        android:textSize="20sp"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
         android:layout_marginStart="5dp"
-        android:layout_toStartOf="@+id/delete_button"
         />
 
     <TextView
@@ -26,7 +25,7 @@
         android:layout_height="wrap_content"
         android:text="School"
         android:textColor="@color/white"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:layout_below="@+id/event_name"
         android:layout_alignParentStart="true"
         android:layout_marginStart="5dp"
@@ -38,20 +37,54 @@
         android:layout_height="wrap_content"
         android:text="10:00a - 10:50a"
         android:textColor="@color/white"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:layout_below="@+id/event_category"
         android:layout_alignParentStart="true"
         android:layout_marginStart="5dp"
         />
 
     <ImageButton
+        android:id="@+id/settings_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/stock_settings_button"
+        android:background="@null"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:padding="10dp"
+        />
+
+    <ImageButton
         android:id="@+id/delete_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/delete_event_button"
+        android:src="@drawable/stock_delete_button"
         android:background="@null"
-        android:layout_alignParentEnd="true"
-        android:layout_alignTop="@+id/event_name"
+        android:layout_alignParentTop="true"
+        android:layout_toStartOf="@+id/settings_button"
+        android:padding="10dp"
+        />
+
+    <ImageButton
+        android:id="@+id/notif_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/stock_notification_on"
+        android:background="@null"
+        android:layout_alignParentTop="true"
+        android:layout_toStartOf="@+id/delete_button"
+        android:padding="10dp"
+        android:contentDescription="Notifications are on"
+        />
+
+    <ImageButton
+        android:id="@+id/edit_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/stock_edit_button"
+        android:background="@null"
+        android:layout_alignParentTop="true"
+        android:layout_toStartOf="@+id/notif_button"
         android:padding="10dp"
         />
 
