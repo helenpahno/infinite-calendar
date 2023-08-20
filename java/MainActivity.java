@@ -344,24 +344,11 @@ public class MainActivity extends AppCompatActivity {
                                         @Override
                                         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                                             int prog = (int) Math.round(seekBar.getProgress() * 0.59);
+
                                             String preText = "This event will begin at: ";
-                                            String hourText = Integer.toString(finalHour);
-                                            String medianText = ":";
-                                            String append = " AM";
-                                            if (Integer.toString(prog).length() < 2) {
-                                                medianText = ":0";
-                                            } else {
-                                                medianText = ":";
-                                            }
+                                            String timeText = InformationCentral.returnUserFriendlyTime(finalHour, prog);
 
-                                            if (finalHour > 12) {
-                                                hourText = Integer.toString(finalHour - 12);
-                                                append = " PM";
-                                            } else if (finalHour == 0) {
-                                                hourText = Integer.toString(12);
-                                            }
-
-                                            seekHUD.setText(preText + hourText + medianText + Integer.toString(prog) + append);
+                                            seekHUD.setText(preText + timeText);
                                         }
 
                                         @Override

@@ -243,7 +243,7 @@ public abstract class InformationCentral {
         }
         if (boundEventLog.size() != 0) {
             boolean modified = false;
-            while (modified == false) {
+            while (!modified) {
                 try {
                     for (String key : boundEventLog.keySet()) {
                         Calendar c = Calendar.getInstance();
@@ -253,12 +253,14 @@ public abstract class InformationCentral {
                         List<BoundEvent> purgedEvents = new ArrayList<BoundEvent>();
 
                         // Loop through the list and determine which events have passed or not, by hour
-                        for (int i = 0; i < eventByDate.size(); i++) {
-                            BoundEvent event = eventByDate.get(i);
-                            long eventMillis = givenDate.getTime() + (event.hour * 3600000) + (event.minuteOffset * 60000) + (event.duration * 60000);
+                        if (eventByDate != null) {
+                            for (int i = 0; i < eventByDate.size(); i++) {
+                                BoundEvent event = eventByDate.get(i);
+                                long eventMillis = givenDate.getTime() + ((long) event.hour * 3600000) + ((long) event.minuteOffset * 60000) + ((long) event.duration * 60000);
 
-                            if (eventMillis < today.getTime()) {
-                                purgedEvents.add(event);
+                                if (eventMillis < today.getTime()) {
+                                    purgedEvents.add(event);
+                                }
                             }
                         }
 
@@ -294,7 +296,8 @@ public abstract class InformationCentral {
         Date today = new Date(c.getTimeInMillis()); // Use the calendar to get today's date
         Date UNIXepochBegins = new Date(0);
         Date mostImmediateDate = new Date(0); // Set a variable for the most immediate date
-        System.out.println(boundEventLog);
+        Date backupDate = new Date(0); // If our first date turns out to be bad, here's the fallback;
+
         for (String dateKey : boundEventLog.keySet()) { // Iterate through all dates on which we have events
             Date date = Date.valueOf(dateKey);
             System.out.println("updateUpcomingEvent(): Day of " + dateKey + " being scrutinized");
@@ -306,13 +309,14 @@ public abstract class InformationCentral {
                 mostImmediateDate = date;
             }
         }
+
         int earliestHourInDate = 24;
         BoundEvent tempUpcomingEvent = new BoundEvent(10, "placeholder", "placeholder", UNIXepochBegins, 0, 99);
         if (mostImmediateDate.getTime() - UNIXepochBegins.getTime() != 0) {
             for (int i = 0; i < boundEventLog.get(mostImmediateDate.toString()).size(); i++) {
                 BoundEvent eventInQuestion = boundEventLog.get(mostImmediateDate.toString()).get(i);
-                long eventStartMillis = eventInQuestion.day.getTime() + (eventInQuestion.hour * 3600000) + (eventInQuestion.minuteOffset * 60000);
-                long eventEndMillis = eventStartMillis + (eventInQuestion.duration * 60000);
+                long eventStartMillis = eventInQuestion.day.getTime() + ((long) eventInQuestion.hour * 3600000) + ((long) eventInQuestion.minuteOffset * 60000);
+                long eventEndMillis = eventStartMillis + ((long) eventInQuestion.duration * 60000);
                 System.out.println("updateUpcomingEvent(): " + eventInQuestion.name + " being checked for hour");
                 if (eventStartMillis < today.getTime() && eventEndMillis > today.getTime()) {
                     System.out.println("Event found to be going on right now; skipping to next");
@@ -333,56 +337,16 @@ public abstract class InformationCentral {
     }
 
     public static String returnUserFriendlyDurationFromEvent(BoundEvent event) {
+        // This function returns a string in the format of "startTime - endTime," where the time is a correct 12-hour representation of the event's duration.
+
         String userFriendlyDuration = "";
 
-        String firstTime = "";
-        String firstAppend = "";
-        String secondTime = "";
-        String secondAppend = "";
-        int rawBeginTime;
-        int rawEndTime;
+        String firstTime = returnUserFriendlyTime(event.hour, event.minuteOffset);
 
-        if (event.hour > 12) { // Set the hour
-            firstTime = firstTime + Integer.toString(event.hour - 12);
-            firstAppend = "PM";
-        } else {
-            if (event.hour == 0) {
-                firstTime = firstTime + "12";
-            } else {
-                firstTime = firstTime + Integer.toString(event.hour);
-            }
-            firstAppend = "AM";
-        }
+        int rawBeginTime = (event.hour * 60) + event.minuteOffset;
+        int rawEndTime = rawBeginTime + event.duration;
 
-        if (Integer.toString(event.minuteOffset).length() < 2) {
-            firstTime = firstTime + ":0" + Integer.toString(event.minuteOffset);
-        } else {
-            firstTime = firstTime + ":" + Integer.toString(event.minuteOffset);
-        }
-
-        firstTime = firstTime + " " + firstAppend;
-        rawBeginTime = (event.hour * 60) + event.minuteOffset;
-        rawEndTime = rawBeginTime + event.duration;
-
-        if (rawEndTime >= (13 * 60)) {
-            secondTime = secondTime + Integer.toString((int) Math.floor(rawEndTime / 60) - 12);
-            secondAppend = "PM";
-        } else {
-            if (((int) rawEndTime / 60) == 0) {
-                secondTime = secondTime + "12";
-            } else {
-                secondTime = secondTime + Integer.toString((int) Math.floor(rawEndTime / 60));
-            }
-            secondAppend = "AM";
-        }
-
-        if (Integer.toString(rawEndTime % 60).length() < 2) {
-            secondTime = secondTime + ":0" + Integer.toString(rawEndTime % 60);
-        } else {
-            secondTime = secondTime + ":" + Integer.toString(rawEndTime % 60);
-        }
-
-        secondTime = secondTime + " " + secondAppend;
+        String secondTime = returnUserFriendlyTime((int) Math.floor(rawEndTime/60f), rawEndTime % 60);
 
         if (rawEndTime > (24 * 60)) {
             System.out.println("This event stretches across the midnight boundary - handle it for us, from the Walmart overnight crew.");
@@ -400,7 +364,7 @@ public abstract class InformationCentral {
         List<BoundEvent> eventList = boundEventLog.get(eventDay.toString());
         BoundEvent cachedEvent = null;
         for (int i = 0; i < eventList.size(); i++) {
-            if (eventList.get(i).name.equals(event.name)) {
+            if (eventList.get(i) == event) {
                 cachedEvent = eventList.get(i);
             }
         }
@@ -560,5 +524,36 @@ public abstract class InformationCentral {
         runtimeRecyclerView.setAdapter(runtimeAdapter);
 
         runtimeRecyclerView.getLayoutManager().onRestoreInstanceState(state);
+    }
+
+    public static String returnUserFriendlyTime (int hour, int minute) {
+        String time = "99:00 AM";
+        String hourText = "";
+        String minuteText = "";
+        String append = "";
+
+        if (hour == 0) {
+            hourText = "12";
+            append = "AM";
+        } else if (hour == 12) {
+            hourText = "12";
+            append = "PM";
+        } else if (hour > 12) {
+            hourText = Integer.toString(hour - 12);
+            append = "PM";
+        } else if (hour < 12) {
+            hourText = Integer.toString(hour);
+            append = "AM";
+        }
+
+        minuteText = Integer.toString(minute);
+
+        if (minuteText.length() < 2) {
+            minuteText = "0" + minuteText;
+        }
+
+        time = hourText + ":" + minuteText + " " + append;
+
+        return time;
     }
 }
